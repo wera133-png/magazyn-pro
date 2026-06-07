@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAGAZYN_PRO_V10.2_FINAL</title>
+<style>
+body{font-family:Arial;background:#f3f5f7;padding:20px;margin:0}
+.container{max-width:1600px;margin:auto;background:#fff;padding:20px;border-radius:12px}
+.logo{text-align:center;font-size:42px;font-weight:bold;color:#1565C0;margin-bottom:15px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+input,select,button{padding:10px;border:1px solid #ccc;border-radius:8px}
+button{cursor:pointer}
+.pallet{border:2px solid #ddd;border-radius:10px;padding:15px;margin-top:15px}
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #ddd;padding:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:20px}
+.kpi{padding:15px;color:#fff;text-align:center;font-weight:bold;border-radius:10px}
+.g{background:#2E7D32}.b{background:#1565C0}.o{background:#F57F17}.r{background:#C62828}
+.warn{background:#fff3cd;padding:8px;margin-top:8px;border-radius:8px}
+.err{background:#ffd7d7;padding:8px;margin-top:8px;border-radius:8px}
+@media print {.noprint{display:none} body{padding:0;background:#fff}}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="logo">UNITRA</div>
+
+<div class="grid noprint">
+<input id="order" placeholder="Nr zamówienia">
+<input id="client" placeholder="Klient">
+<input id="wz" placeholder="WZ">
+<input id="carrier" placeholder="Przewoźnik">
+<input id="date" type="date">
+</div>
+
+<div id="header" style="border:1px solid #ddd;padding:10px;margin-top:15px">
+<h3>SPECYFIKACJA WYSYŁKI</h3>
+<div><b>Zamówienie:</b> <span id="sOrder"></span></div>
+<div><b>Klient:</b> <span id="sClient"></span></div>
+<div><b>WZ:</b> <span id="sWZ"></span></div>
+<div><b>Przewoźnik:</b> <span id="sCarrier"></span></div>
+<div><b>Data:</b> <span id="sDate"></span></div>
+</div>
+
+<div class="noprint" style="margin-top:15px">
+<button onclick="addPallet()">➕ Dodaj paletę</button>
+<button onclick="window.print()">🖨️ Drukuj</button>
+</div>
+
+<div id="pallets"></div>
+
+<div class="kpis">
+<div class="kpi g">Waga<br><span id="tw">0 kg</span></div>
+<div class="kpi b">Kubatura<br><span id="tv">0 m³</span></div>
+<div class="kpi o">Najwyższa paleta<br><span id="th">0 cm</span></div>
+<div class="kpi r">Palety<br><span id="tp">0</span></div>
+</div>
+
+<div style="margin-top:20px;border:1px solid #ddd;padding:10px">
+<h3>Raport załadunku</h3>
+<div id="report"></div>
+</div>
+</div>
+
+<script>
+const products={
+"WSH-605":{t:"elec",h:24,w:14,v:0.058656},
+"WSH-805":{t:"elec",h:24,w:20.2,v:0.058656},
+"CSH-801":{t:"elec",h:24,w:9.45,v:0.058656},
+"GSH-630":{t:"elec",h:24,w:13.8,v:0.058656},
+"GSH-801":{t:"elec",h:28,w:18.9,v:0.081536},
+"DSH-805":{t:"elec",h:16,w:8,v:0.039104},
+"ZGZ-801":{t:"col",h:127,w:39.5,v:0.256032},
+"ZGZ-802":{t:"col",h:127,w:89.5,v:0.256032},
+"ZGB-601":{t:"col",h:137,w:27.25,v:0.2466},
+"ZGB-401":{t:"401",h:45,w:23.2,v:0.10962},
+"R10":{t:"acc",h:15,w:0.8,v:0.00675},
+"NB1":{t:"acc",h:15,w:2.1,v:0.009},
+"KG-25-01":{t:"acc",h:7,w:1.05,v:0.004631},
+"KG-25-02":{t:"acc",h:7,w:1.35,v:0.004631},
+"KG-40-01":{t:"acc",h:8,w:1.9,v:0.008262},
+"KG-40-02":{t:"acc",h:8,w:2.4,v:0.008262},
+"WT-1":{t:"acc",h:1,w:0.5,v:0.000544},
+"WT-2":{t:"acc",h:1,w:0.65,v:0.001089}
+};
+
+const palletH={EURO:15,"PÓŁPALETA":13,DECHA:14};
+const palletW={EURO:23,"PÓŁPALETA":8,DECHA:17};
+
+function opts(){return Object.keys(products).map(x=>`<option>${x}</option>`).join('')}
+
+function addPallet(){
+let d=document.createElement('div');
+d.className='pallet';
+d.innerHTML=`<h3>Paleta</h3>
+<select class="ptype"><option>EURO</option><option>PÓŁPALETA</option><option>DECHA</option></select>
+<button class="noprint" onclick="this.parentElement.remove();calc()">Usuń</button>
+<table><thead><tr><th>Produkt</th><th>Ilość</th><th>Uwagi</th><th></th></tr></thead><tbody></tbody></table>
+<button class="noprint addp">Dodaj produkt</button>
+<div class="res"></div>`;
+pallets.appendChild(d);
+d.querySelector('.addp').onclick=()=>addProduct(d);
+addProduct(d);
+}
+
+function addProduct(p){
+let tr=document.createElement('tr');
+tr.innerHTML=`<td><select class="prod">${opts()}</select></td>
+<td><input class="qty" type="number" value="1"></td>
+<td><input></td>
+<td><button class="noprint" onclick="this.closest('tr').remove();calc()">Usuń</button></td>`;
+p.querySelector('tbody').appendChild(tr);
+}
+
+function updateHeader(){
+sOrder.textContent=order.value;
+sClient.textContent=client.value;
+sWZ.textContent=wz.value;
+sCarrier.textContent=carrier.value;
+sDate.textContent=date.value;
+}
+
+function calc(){
+let TW=0,TV=0,TH=0,rep='';
+
+document.querySelectorAll('.pallet').forEach((pal,i)=>{
+let w=0,v=0,elec=0,col=0,pairs=0,msg=[];
+
+pal.querySelectorAll('tbody tr').forEach(r=>{
+let p=products[r.querySelector('.prod').value];
+let q=parseInt(r.querySelector('.qty').value||0);
+w+=p.w*q;
+v+=p.v*q;
+
+if(p.t==='elec'||p.t==='401') elec+=Math.ceil(q/2)*p.h;
+if(p.t==='col'){pairs+=Math.ceil(q/2);col=Math.max(col,p.h);}
+});
+
+let type=pal.querySelector('.ptype').value;
+w+=palletW[type];
+let h=elec+col+palletH[type];
+
+if(h>220) msg.push('🔴 Przekroczono 220 cm');
+else if(h>180) msg.push('🟠 Blisko limitu');
+if(pairs>=3) msg.push('🔴 Za dużo par kolumn');
+
+TW+=w; TV+=v; TH=Math.max(TH,h);
+
+pal.querySelector('h3').textContent='Paleta P'+(i+1);
+pal.querySelector('.res').innerHTML=`<b>Waga:</b> ${w.toFixed(1)} kg | <b>Wysokość:</b> ${h} cm | <b>Kubatura:</b> ${v.toFixed(3)} m³`
++msg.map(x=>`<div class="${x.includes('🔴')?'err':'warn'}">${x}</div>`).join('');
+
+rep+=`<div>Paleta P${i+1} | ${type} | ${w.toFixed(1)} kg | ${h} cm | ${v.toFixed(3)} m³</div>`;
+});
+
+tw.textContent=TW.toFixed(1)+' kg';
+tv.textContent=TV.toFixed(3)+' m³';
+th.textContent=TH.toFixed(0)+' cm';
+tp.textContent=document.querySelectorAll('.pallet').length;
+report.innerHTML=rep;
+}
+
+document.addEventListener('input',()=>{updateHeader();calc();});
+document.addEventListener('change',()=>{updateHeader();calc();});
+addPallet();
+</script>
+</body></html>
