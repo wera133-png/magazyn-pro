@@ -196,8 +196,6 @@ button{
     }
 }
 </style>
-  
-</style>
 </head>
 <body>
 <div class="container">
@@ -283,6 +281,7 @@ addProduct(d);
 
 function addProduct(p){
 let tr=document.createElement('tr');
+
 tr.innerHTML=`
 <td>
 <b>Produkt</b><br>
@@ -300,9 +299,14 @@ tr.innerHTML=`
 </td>
 
 <td>
-<button class="noprint" onclick="this.closest('tr').remove();calc()">Usuń produkt</button>
+<button class="noprint" onclick="this.closest('tr').remove();calc()">
+Usuń produkt
+</button>
 </td>
 `;
+
+p.querySelector('tbody').appendChild(tr);
+calc();
 }
 
 function updateHeader(){
