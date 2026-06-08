@@ -221,6 +221,7 @@ button{
 <div class="noprint" style="margin-top:15px">
 <button onclick="addPallet()">➕ Dodaj paletę</button>
 <button onclick="window.print()">🖨️ Drukuj</button>
+<button onclick="saveShipment()">💾 Zapisz wysyłkę</button>
 </div>
 
 <div id="pallets"></div>
@@ -358,6 +359,44 @@ report.innerHTML=rep;
 
 document.addEventListener('input',()=>{updateHeader();calc();});
 document.addEventListener('change',()=>{updateHeader();calc();});
+
+async function saveShipment(){
+
+const data={
+order:order.value,
+client:client.value,
+wz:wz.value,
+carrier:carrier.value,
+palety:tp.textContent,
+waga:tw.textContent,
+kubatura:tv.textContent,
+maxwys:th.textContent
+};
+
+try{
+
+await fetch(
+"https://script.google.com/macros/s/AKfycbyPveAg2g3sAmjN7Q4MZfLTUPE6rxxs0xr-WATYVSAw58d_V86sNt_xuTbUr1YHx01R/exec",
+{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify(data)
+}
+);
+
+alert("Wysyłka zapisana");
+
+}catch(err){
+
+console.error(err);
+alert("Błąd zapisu");
+
+}
+
+}
+
 addPallet();
 </script>
 </body></html>
